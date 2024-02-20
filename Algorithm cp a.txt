@@ -1,0 +1,195 @@
+import random
+
+MAX_PRODUCTS = 100
+MAX_QUEUE = 100
+
+class Product:
+    def __init__(self, id, name, quantity, price):
+        self.id = id
+        self.name = name
+        self.quantity = quantity
+        self.price = price
+
+class Queue:
+    def __init__(self):
+        self.front = -1
+        self.rear = -1
+        self.capacity = MAX_QUEUE
+        self.items = [None] * MAX_QUEUE
+
+def initialize_queue(queue):
+    queue.front = -1
+    queue.rear = -1
+    queue.capacity = MAX_QUEUE
+
+def is_queue_empty(queue):
+    return queue.front == -1
+
+def is_queue_full(queue):
+    return (queue.rear + 1) % queue.capacity == queue.front
+
+def enqueue(queue, item, quantity):
+    if is_queue_full(queue):
+        print("Queue is full. Cannot enqueue.")
+        return
+
+    if is_queue_empty(queue):
+        queue.front = 0
+
+    queue.rear = (queue.rear + 1) % queue.capacity
+    item.quantity = quantity
+    queue.items[queue.rear] = item
+
+    print(f"{quantity} units of {item.name} have been added to the checkout queue.")
+
+def dequeue(queue, id, quantity):
+    if is_queue_empty(queue):
+        print("Queue is empty. Cannot dequeue.")
+        return None
+
+    index = queue.front
+
+    while index != (queue.rear + 1) % queue.capacity:
+        if queue.items[index].id == id:
+            dequeued_item = queue.items[index]
+
+            if dequeued_item.quantity < quantity:
+                print(f"Error: Cannot dequeue more quantity ({quantity}) than available ({dequeued_item.quantity}).")
+                return None
+
+            if dequeued_item.quantity == quantity:
+                # Remove the entire product
+                if queue.front == queue.rear:
+                    queue.front = -1
+                    queue.rear = -1
+                elif index == queue.front:
+                    queue.front = (queue.front + 1) % queue.capacity
+                elif index == queue.rear:
+                    queue.rear = (queue.rear - 1 + queue.capacity) % queue.capacity
+                else:
+                    # Shift elements to fill the gap
+                    i = index
+                    while i != queue.rear:
+                        queue.items[i] = queue.items[(i + 1) % queue.capacity]
+                        i = (i + 1) % queue.capacity
+                    queue.rear = (queue.rear - 1 + queue.capacity) % queue.capacity
+            else:
+                # Reduce the quantity
+                dequeued_item.quantity -= quantity
+
+            return dequeued_item
+
+        index = (index + 1) % queue.capacity
+
+    print(f"Product with ID {id} not found in the checkout queue.")
+    return None
+
+def display_inventory(inventory):
+    print("\n--- Inventory ---")
+    print("ID\tName\t\t\tQuantity\tPrice")
+
+    for product in inventory:
+        print(f"{product.id}\t{product.name}\t\t\t{product.quantity}\t\t{product.price:.2f}")
+
+def display_checkout_queue(checkout_queue):
+    print("\n--- Checkout Queue ---")
+    print("ID\tName\t\t\tPrice\t\tQuantity")
+
+    if is_queue_empty(checkout_queue):
+        print("Queue is empty.")
+        return
+
+    # Sort checkout queue based on quantity using Bubble Sort
+    for i in range(checkout_queue.front, checkout_queue.rear):
+        for j in range(checkout_queue.front, checkout_queue.rear):
+            if checkout_queue.items[j].quantity < checkout_queue.items[j + 1].quantity:
+                checkout_queue.items[j], checkout_queue.items[j + 1] = checkout_queue.items[j + 1], checkout_queue.items[j]
+
+    i = checkout_queue.front
+    while i != (checkout_queue.rear + 1) % checkout_queue.capacity:
+        print(f"{checkout_queue.items[i].id}\t{checkout_queue.items[i].name}\t\t{checkout_queue.items[i].price:.2f}", end="\t\t")
+        print(f"{checkout_queue.items[i].quantity}")
+        i = (i + 1) % checkout_queue.capacity
+
+def search_product_by_name(inventory, product_name):
+    print("\n--- Search Result ---")
+    print("ID\tName\t\t\tQuantity\tPrice")
+
+    for product in inventory:
+        if product.name == product_name:
+            print(f"{product.id}\t{product.name}\t\t\t{product.quantity}\t\t{product.price:.2f}")
+            return  # Assuming there is only one matching product
+
+    print(f"Product with name \"{product_name}\" not found in the inventory.")
+
+def main():
+    inventory = []
+    product_count = 0
+
+    checkout_queue = Queue()
+    initialize_queue(checkout_queue)
+
+    # Add 20 real daily life grocery products directly to the inventory
+    product_names = [
+        "Bananas", "Milk", "Bread", "Eggs", "Chicken", "Tomatoes", "Potatoes", "Onions", "Rice", "Pasta",
+        "Apples", "Oranges", "Carrots", "Lettuce", "Cheese", "Yogurt", "Coffee", "Tea", "Sugar", "Salt"
+    ]
+
+    for i in range(20):
+        new_product = Product(
+            id=i + 1,
+            name=product_names[i],
+            quantity=random.randint(1, 50),
+            price=random.uniform(0.0, 99.9)
+        )
+
+        inventory.append(new_product)
+        product_count += 1
+
+    while True:
+        print("\n--- Grocery Management System ---")
+        print("1. Display Inventory")
+        print("2. Display Checkout Queue")
+        print("3. Enqueue to Checkout Queue")
+        print("4. Dequeue from Checkout Queue")
+        print("5. Search Product by Name")
+        print("6. Exit")
+
+        choice = int(input("Enter your choice: "))
+
+        if choice == 1:
+            display_inventory(inventory)
+        elif choice == 2:
+            display_checkout_queue(checkout_queue)
+        elif choice == 3:
+            if product_count > 0:
+                id_to_enqueue = int(input("Enter the ID of the product to enqueue: "))
+                quantity_to_enqueue = int(input("Enter the quantity to enqueue: "))
+                for product in inventory:
+                    if product.id == id_to_enqueue:
+                        enqueue(checkout_queue, product, quantity_to_enqueue)
+                        break
+            else:
+                print("Inventory is empty. Enqueue products before dequeuing.")
+        elif choice == 4:
+            if not is_queue_empty(checkout_queue):
+                id_to_dequeue = int(input("Enter the ID of the product to dequeue: "))
+                quantity_to_dequeue = int(input("Enter the quantity to dequeue: "))
+                dequeued_item = dequeue(checkout_queue, id_to_dequeue, quantity_to_dequeue)
+                if dequeued_item:
+                    total_price = dequeued_item.price * quantity_to_dequeue
+                    print(f"{quantity_to_dequeue} units of {dequeued_item.name} have been dequeued from the checkout queue. Total Price: {total_price:.2f}")
+                display_checkout_queue(checkout_queue)
+            else:
+                print("Checkout queue is empty. Enqueue products before dequeuing.")
+        elif choice == 5:
+            search_product_name = input("Enter the name of the product to search: ")
+            search_product_by_name(inventory, search_product_name)
+        elif choice == 6:
+            print("Exiting the program. Thank you!")
+            break
+        else:
+            print("Invalid choice. Please try again.")
+
+if __name__ == "__main__":
+    main()
